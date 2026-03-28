@@ -1,9 +1,12 @@
 {
   "name": "zakariahere-plugins",
+  "owner": {
+    "name": "zakariahere"
+  },
   "plugins": [
     {
       "name": "pactjunitplugin",
-      "source": "https://github.com/zakariahere/pactjunitplugin",
+      "source": "git+https://github.com/zakariahere/pactjunitplugin.git",
       "description": "Pact JUnit contract test generator for Java"
     }
   ]
