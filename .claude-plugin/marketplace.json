@@ -6,7 +6,10 @@
   "plugins": [
     {
       "name": "pactjunitplugin",
-      "source": "https://github.com/zakariahere/pactjunitplugin.git",
+      "source": {
+        "type": "github",
+        "repo": "zakariahere/pactjunitplugin"
+      },
       "description": "Pact JUnit contract test generator for Java"
     }
   ]
