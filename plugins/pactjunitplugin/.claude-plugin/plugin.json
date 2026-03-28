@@ -1,0 +1,10 @@
+{
+  "name": "pactjunitplugin",
+  "description": "Interactive Pact JUnit test generator — guides you through building consumer and provider contract tests from OpenAPI specs or scratch, with full DSL support for PactDslJsonBody, matchers, and state management.",
+  "version": "1.0.0",
+  "author": {
+    "name": "zakariahere"
+  },
+  "repository": "https://github.com/zakariahere/pactjunitplugin",
+  "license": "Apache-2.0"
+}

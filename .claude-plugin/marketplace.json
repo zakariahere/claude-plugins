@@ -3,14 +3,24 @@
   "owner": {
     "name": "zakariahere"
   },
+  "metadata": {
+    "description": "Plugin marketplace for zakariahere",
+    "version": "1.0.0",
+    "pluginRoot": "./.claude-plugin"
+  },
   "plugins": [
     {
       "name": "pactjunitplugin",
-      "source": {
-        "type": "github",
-        "repo": "zakariahere/pactjunitplugin"
+      "source": "./plugins/pactjunitplugin",
+      "description": "Pact JUnit contract test generator for Java",
+      "version": "1.0.0",
+      "author": {
+        "name": "zakariahere"
       },
-      "description": "Pact JUnit contract test generator for Java"
+      "repository": "https://github.com/zakariahere/pactjunitplugin",
+      "license": "Apache-2.0",
+      "category": "development",
+      "tags": ["pact", "java", "contract-testing", "junit"]
     }
   ]
 }
