@@ -8,7 +8,7 @@ Marketplace for Claude plugins created or imported by [zakariahere](https://gith
 
 | Plugin | Version | Category | Description |
 |--------|---------|----------|-------------|
-| [mcpascli](#mcpascli) | 1.0.0 | observability | Grafana observability stack via mcp2cli — metrics, logs, traces, incidents, dashboards |
+| [mcpascli](#mcpascli) | 1.0.0 | mcp | Turn any MCP server into a Claude skill — run all server tools via mcp2cli from natural language |
 | [pactjunitplugin](#pactjunitplugin) | 1.0.0 | development | Pact JUnit contract test generator for Java |
 
 ---
@@ -17,27 +17,51 @@ Marketplace for Claude plugins created or imported by [zakariahere](https://gith
 
 ### mcpascli
 
-> Grafana observability via mcp2cli — interact with Grafana dashboards, alerts, incidents, Prometheus, Loki, Tempo, and Pyroscope using natural language commands routed through mcp2cli.
+> Turn any MCP server into a Claude skill. Point `mcp2cli` at any MCP SSE endpoint and run all its tools through natural language — no MCP client configuration required.
 
 - **Author:** zakariahere
 - **License:** Apache-2.0
 - **Repository:** https://github.com/zakariahere/claude-plugins
-- **Tags:** `grafana` · `observability` · `prometheus` · `loki` · `incidents` · `mcp`
+- **Tags:** `mcp` · `mcp2cli` · `cli` · `tools` · `skill`
+
+#### How it works
+
+`mcpascli` uses [`mcp2cli`](https://github.com/zakariahere/mcp2cli) to bridge any MCP server to the command line. The included skill is pre-configured for a Grafana MCP server (`localhost:8000`) but the pattern works with **any MCP SSE endpoint** — point it at a different URL and all tools exposed by that server become available.
+
+```bash
+# General pattern
+mcp2cli --mcp <SSE_URL> <tool-name> [--arg value ...]
+
+# Example: Grafana MCP server
+mcp2cli --mcp http://localhost:8000/sse list-datasources
+```
 
 #### Skills
 
 | Skill | Description |
 |-------|-------------|
-| `/mcpascli` | Run any Grafana MCP tool — query metrics, logs, traces, manage incidents, dashboards, alerts, and on-call |
+| `/mcpascli` | Invoke any tool from a running MCP server using natural language |
+
+#### Bundled tool coverage (Grafana MCP)
+
+The skill ships with a full command reference for the Grafana MCP server, covering:
+
+- **Prometheus** — metric discovery, PromQL instant & range queries, histogram percentiles
+- **Loki** — LogQL queries, pattern detection, label discovery
+- **Tempo** — slow request trace analysis via Sift
+- **Pyroscope** — profile type listing, label discovery, profile queries
+- **Dashboards & Panels** — search, render, create, update, deeplinks
+- **Incidents** — create, list, update, add timeline activities
+- **On-Call** — schedules, shifts, current on-call users, alert groups
+- **Sift Investigations** — error pattern analysis, slow request detection
+- **Alerting** — alert rules and notification routing management
+- **Annotations** — create, fetch, update
 
 #### When to use
 
-- You want to query Prometheus metrics or run PromQL expressions
-- You want to search or tail Loki logs with LogQL
-- You want to find slow traces via Tempo or profile with Pyroscope
-- You want to list, create, or render Grafana dashboards and panels
-- You want to manage incidents, add timeline notes, or check on-call schedules
-- You want to run Sift investigations for error pattern or slow request analysis
+- You have any MCP server running and want to interact with it via Claude without configuring MCP clients
+- You want to run MCP tools from Bash commands inside Claude Code
+- You need a ready-made skill for the Grafana observability stack
 
 ---
 
