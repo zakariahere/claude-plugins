@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mcp2cli --mcp http://localhost:8000/sse)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse query-prometheus --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse query-loki-logs --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse list-incidents --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse create-incident --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse search-dashboards --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse get-dashboard-by-uid --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse list-prometheus-metric-names --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse find-error-pattern-logs --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse add-activity-to-incident --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse get-panel-image --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse find-slow-requests --help)",
+      "Bash(mcp2cli --mcp http://localhost:8000/sse list-datasources --help)",
+      "Bash(git add:*)"
+    ]
+  }
+}
