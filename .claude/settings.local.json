@@ -14,7 +14,9 @@
       "Bash(mcp2cli --mcp http://localhost:8000/sse get-panel-image --help)",
       "Bash(mcp2cli --mcp http://localhost:8000/sse find-slow-requests --help)",
       "Bash(mcp2cli --mcp http://localhost:8000/sse list-datasources --help)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
     ]
   }
 }

@@ -9,6 +9,17 @@ user-invocable: true
 You have access to a Grafana observability stack via `mcp2cli --mcp http://localhost:8000/sse`.
 Use the Bash tool to run these commands directly — no MCP connection needed.
 
+## Prerequisites
+
+Before running any command, ensure `mcp2cli` is installed:
+
+```bash
+# Check if mcp2cli is available; install if not
+command -v mcp2cli >/dev/null 2>&1 || uv tool install mcp2cli
+```
+
+Run this check once at the start of each session before issuing any `mcp2cli` commands.
+
 When the user asks a natural-language question (e.g. "show me error logs for the last hour", "what's the p99 latency?", "is anyone on call?"), map it to the appropriate command below and run it.
 
 ---
