@@ -62,6 +62,14 @@ Group all interactions into a single test class. Use one `@Pact` method per inte
 Name the class: `{ConsumerName}To{ProviderName}ContractTest`
 Name pact methods: `{httpMethod}{ResourceName}{StatusCode}Pact` (e.g., `getUser200Pact`, `postOrder422Pact`)
 
+**Always annotate the class with `pactVersion = PactSpecVersion.V3`:**
+```java
+@PactTestFor(providerName = "PROVIDER", pactVersion = PactSpecVersion.V3)
+```
+Pact 4.6.x defaults to V4 format and rejects `RequestResponsePact` + `PactDslWithProvider` at runtime without this.
+
+**Always implement `@Test` method bodies** with a real `java.net.http.HttpClient` call against `mockServer.getUrl()`. An empty or TODO-only body causes the test to fail with "requests were not received".
+
 ### Step 5: Generate provider state strings
 
 For each `2xx` response interaction, derive a provider state from the path:

@@ -2,6 +2,15 @@
 
 Common request/response interaction shapes for `PactDslWithProvider`.
 
+> **Pact 4.6.x requirement**: All examples below use `RequestResponsePact` + `PactDslWithProvider`.
+> This requires `pactVersion = PactSpecVersion.V3` on `@PactTestFor`, otherwise 4.6.x rejects the
+> method signature at runtime. Always include:
+> ```java
+> import au.com.dius.pact.core.model.PactSpecVersion;
+> // ...
+> @PactTestFor(providerName = "...", pactVersion = PactSpecVersion.V3)
+> ```
+
 ---
 
 ## GET — single resource

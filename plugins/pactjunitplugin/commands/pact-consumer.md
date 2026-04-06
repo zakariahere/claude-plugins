@@ -25,6 +25,8 @@ Fix or generate from the description. Address the most common DSL pitfalls:
 - **Wrong return type** — `@Pact` methods must return `RequestResponsePact`, not `void`
 - **Body type mismatch** — `.body(new PactDslJsonBody()...)` vs `.body(LambdaDsl.newJsonBody(o -> {...}).build())`
 - **asBody() misuse** — only call `.asBody()` when assigning to a `DslPart` variable, not inside `.body()`
+- **Pact 4.6.x V4 default** — always add `pactVersion = PactSpecVersion.V3` to `@PactTestFor`. Without it, 4.6.x rejects `RequestResponsePact` + `PactDslWithProvider` with a method signature error at runtime
+- **Empty `@Test` body** — the Pact mock server requires at least one matching HTTP request per interaction. A TODO-only test body fails with "requests were not received". Always generate a real `HttpClient` call
 
 ### Output format
 
@@ -39,7 +41,7 @@ Always output:
 
 ```java
 @ExtendWith(PactConsumerTestExt.class)
-@PactTestFor(providerName = "PROVIDER")
+@PactTestFor(providerName = "PROVIDER", pactVersion = PactSpecVersion.V3)  // V3 required for RequestResponsePact in 4.6.x
 class ConsumerPactTest {
 
     @Pact(consumer = "CONSUMER")
@@ -60,8 +62,17 @@ class ConsumerPactTest {
 
     @Test
     @PactTestFor(pactMethod = "interactionName")
-    void testInteractionName(MockServer mockServer) {
-        // call real client code against mockServer.getUrl()
+    void testInteractionName(MockServer mockServer) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(mockServer.getUrl() + "/path"))
+            .header("Accept", "application/json")
+            .GET()
+            .build();
+
+        HttpResponse<String> response = HttpClient.newHttpClient()
+            .send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo(200);
     }
 }
 ```

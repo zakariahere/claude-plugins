@@ -79,17 +79,22 @@ import au.com.dius.pact.consumer.dsl.PactDslJsonBody;
 import au.com.dius.pact.consumer.dsl.PactDslWithProvider;
 import au.com.dius.pact.consumer.junit5.PactConsumerTestExt;
 import au.com.dius.pact.consumer.junit5.PactTestFor;
+import au.com.dius.pact.core.model.PactSpecVersion;
 import au.com.dius.pact.core.model.RequestResponsePact;
 import au.com.dius.pact.core.model.annotations.Pact;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(PactConsumerTestExt.class)
-@PactTestFor(providerName = "{providerName}")
+@PactTestFor(providerName = "{providerName}", pactVersion = PactSpecVersion.V3)
 class {ConsumerName}To{ProviderName}PactTest {
 
     @Pact(consumer = "{consumerName}")
@@ -111,9 +116,18 @@ class {ConsumerName}To{ProviderName}PactTest {
 
     @Test
     @PactTestFor(pactMethod = "{pactMethodName}")
-    void {testMethodName}(MockServer mockServer) {
-        // TODO: instantiate your client pointing at mockServer.getUrl()
-        // then assert on the response
+    void {testMethodName}(MockServer mockServer) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(mockServer.getUrl() + "{path}"))
+            .header("Content-Type", "application/json")
+            .{METHOD}(HttpRequest.BodyPublishers.ofString("{requestBodyJson}"))
+            .build();
+
+        HttpResponse<String> response = HttpClient.newHttpClient()
+            .send(request, HttpResponse.BodyHandlers.ofString());
+
+        assertThat(response.statusCode()).isEqualTo({statusCode});
+        // assert specific response fields here
     }
 }
 ```
@@ -125,6 +139,10 @@ class {ConsumerName}To{ProviderName}PactTest {
 - Null-able fields: `.or("field", PactDslJsonRootValue.stringType(), PactDslJsonRootValue.nullValue())`
 - Close every `.object()` and `.array()` block — the most common compilation error
 - End the body chain with `.asBody()` only when assigning to `DslPart`; omit it when passing directly to `.body()`
+
+**Critical pitfalls for Pact 4.6.x:**
+- **Always add `pactVersion = PactSpecVersion.V3`** to `@PactTestFor` when using `RequestResponsePact` + `PactDslWithProvider`. Pact 4.6.x defaults to V4, and without this the runtime throws: `Method X does not conform required method signature 'public V4Pact xxx(PactBuilder builder)'`
+- **Never leave `@Test` bodies empty.** The mock server starts and waits for a real HTTP request. If the test body makes no request, the test fails with "The following requests were not received". Always implement the body with at least a minimal `HttpClient` call.
 
 ### Provider Verification Test
 
