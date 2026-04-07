@@ -1,4 +1,4 @@
-{
+ {
    "name": "zakariahere-plugins",
    "owner": {
      "name": "zakariahere"
@@ -25,8 +25,7 @@
      {
        "name": "mcpascli",
        "source": "./plugins/mcpascli",
-       "description": "Grafana observability via mcp2cli - interact with Grafana dashboards, alerts, incidents, Prometheus, Loki, Tempo, and Pyroscope using natural language commands routed through 
-mcp2cli.",
+       "description": "MCP2CLI observability plugin for Grafana",
        "version": "1.0.0",
        "author": {
          "name": "zakariahere"
