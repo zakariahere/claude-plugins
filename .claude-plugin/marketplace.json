@@ -1,39 +1,41 @@
-{
-  "name": "zakariahere-plugins",
-  "owner": {
-    "name": "zakariahere"
-  },
-  "metadata": {
-    "description": "Plugin marketplace for zakariahere",
-    "version": "1.0.0",
-    "pluginRoot": "./.claude-plugin"
-  },
-  "plugins": [
-    {
-      "name": "pactjunitplugin",
-      "source": "./plugins/pactjunitplugin",
-      "description": "Pact JUnit contract test generator for Java",
-      "version": "1.0.0",
-      "author": {
-        "name": "zakariahere"
-      },
-      "repository": "https://github.com/zakariahere/pactjunitplugin",
-      "license": "Apache-2.0",
-      "category": "development",
-      "tags": ["pact", "java", "contract-testing", "junit"]
-    },
-    {
-      "name": "mcpascli",
-      "source": "./plugins/mcpascli",
-      "description": "Grafana observability via mcp2cli — interact with Grafana dashboards, alerts, incidents, Prometheus, Loki, Tempo, and Pyroscope using natural language commands routed through mcp2cli.",
-      "version": "1.0.0",
-      "author": {
-        "name": "zakariahere"
-      },
-      "repository": "https://github.com/zakariahere/claude-plugins",
-      "license": "Apache-2.0",
-      "category": "observability",
-      "tags": ["grafana", "prometheus", "loki", "tempo", "mcp", "observability"]
-    }
-  ]
-}
+
+ {
+   "name": "zakariahere-plugins",
+   "owner": {
+     "name": "zakariahere"
+   },
+   "metadata": {
+     "description": "Plugin marketplace for zakariahere",
+     "version": "1.0.0",
+     "pluginRoot": "."
+   },
+   "plugins": [
+     {
+       "name": "pactjunitplugin",
+       "source": "./plugins/pactjunitplugin",
+       "description": "Pact JUnit contract test generator for Java",
+       "version": "1.0.0",
+       "author": {
+         "name": "zakariahere"
+       },
+       "repository": "https://github.com/zakariahere/pactjunitplugin",
+       "license": "Apache-2.0",
+       "category": "development",
+       "tags": ["pact", "java", "contract-testing", "junit"]
+     },
+     {
+       "name": "mcpascli",
+       "source": "./plugins/mcpascli",
+       "description": "Grafana observability via mcp2cli — interact with Grafana dashboards, alerts, incidents, Prometheus, Loki, Tempo, and Pyroscope using natural language commands routed through 
+mcp2cli.",
+       "version": "1.0.0",
+       "author": {
+         "name": "zakariahere"
+       },
+       "repository": "https://github.com/zakariahere/claude-plugins",
+       "license": "Apache-2.0",
+       "category": "observability",
+       "tags": ["grafana", "prometheus", "loki", "tempo", "mcp", "observability"]
+     }
+   ]
+ }
