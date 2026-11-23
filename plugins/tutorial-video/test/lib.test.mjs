@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { buildSrt, chapters, cues, fitSpeed, layout, parseScript, srtTime, ytTime } from "../scripts/lib.mjs";
+import { buildSrt, chapters, cues, fitSpeed, joinFilter, layout, parseScript, planSegments, segmentsFilter, sentences, srtTime, ytTime } from "../scripts/lib.mjs";
 
 const SCRIPT = `---
 title: Hello Claude from Scala
@@ -87,8 +87,55 @@ test("fitSpeed never slows down and refuses absurd speed-ups", () => {
   assert.throws(() => fitSpeed(100, 10), /trim it/);
 });
 
+test("planSegments speeds up long stretches, holds short ones, plays the tail at 1x", () => {
+  // Take is 40 s. Actions at 3 s, 20 s and 22 s of the take must land at 0, 5 and 9 s of a 12 s scene.
+  const segs = planSegments([{ src: 3, at: 0 }, { src: 20, at: 5 }, { src: 22, at: 9 }], 40, 12);
+  assert.deepEqual(segs, [
+    { src0: 3, src1: 20, at: 0, target: 5, speed: 3.4, hold: 0 }, // 17 s into 5 s
+    { src0: 20, src1: 22, at: 5, target: 4, speed: 1, hold: 2 }, // 2 s into 4 s: hold
+    { src0: 22, src1: 25, at: 9, target: 3, speed: 1, hold: 0 }, // tail at real time
+  ]);
+  // The tail holds when the take runs out.
+  assert.equal(planSegments([{ src: 0, at: 0 }], 2, 5)[0].hold, 3);
+});
+
+test("planSegments rejects marks it cannot honour", () => {
+  assert.throws(() => planSegments([], 10, 5), /at least one/);
+  assert.throws(() => planSegments([{ src: 1, at: 1 }], 10, 5), /first mark/);
+  assert.throws(() => planSegments([{ src: 0, at: 0 }, { src: 0, at: 2 }], 10, 5), /src must increase/);
+  assert.throws(() => planSegments([{ src: 0, at: 0 }, { src: 2, at: 0 }], 10, 5), /at must increase/);
+  assert.throws(() => planSegments([{ src: 0, at: 0 }, { src: 12, at: 2 }], 10, 5), /outside the take/);
+  assert.throws(() => planSegments([{ src: 0, at: 0 }, { src: 2, at: 6 }], 10, 5), /before the scene ends/);
+});
+
+test("segmentsFilter builds one split, a retimed branch per segment and a concat", () => {
+  const f = segmentsFilter(planSegments([{ src: 0, at: 0 }, { src: 6, at: 2 }], 8, 4), "fps=30");
+  assert.match(f, /^\[0:v\]fps=30,split=2\[s0in\]\[s1in\];/);
+  assert.match(f, /\[s0in\]trim=start=0:end=6,setpts=\(PTS-STARTPTS\)\/3,fps=30,trim=duration=2/);
+  assert.match(f, /\[s0\]\[s1\]concat=n=2:v=1:a=0\[v\]$/);
+});
+
 test("time formats", () => {
   assert.equal(srtTime(3723.4567), "01:02:03,457");
   assert.equal(ytTime(65), "1:05");
   assert.equal(ytTime(3725), "1:02:05");
+});
+
+test("sentences splits on . ! ? followed by a space, keeping the punctuation", () => {
+  assert.deepEqual(sentences("Let's run it. And there's Claude's answer! Done?  Yes"), [
+    "Let's run it.",
+    "And there's Claude's answer!",
+    "Done?",
+    "Yes",
+  ]);
+  assert.deepEqual(sentences("version one point oh, then more."), ["version one point oh, then more."]);
+});
+
+test("joinFilter pads every clip but the last and applies the pace", () => {
+  assert.equal(
+    joinFilter(3, 0.45, 0.93),
+    "[0:a]apad=pad_dur=0.45[p0];[1:a]apad=pad_dur=0.45[p1];[p0][p1][2:a]concat=n=3:v=0:a=1,atempo=0.93[a]",
+  );
+  assert.equal(joinFilter(1, 0.45, 1), "[0:a]concat=n=1:v=0:a=1,anull[a]");
+  assert.throws(() => joinFilter(2, 0.4, 0.3), /pace/);
 });

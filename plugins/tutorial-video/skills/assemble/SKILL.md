@@ -19,7 +19,21 @@ fine too, saved as `takes/raw/<scene>.mkv` or `.mp4`. Tips worth repeating to th
   and the terminal to match, so code is still readable on a phone.
 - Act out the shot list at a calm pace without worrying about waits; ingest cuts frozen stretches.
 - Hide notifications, bookmarks bars, tokens, emails and anything private. Never show `.env` files.
-Wait for the user to say a take is in. Never record or drive their screen yourself.
+Wait for the user to say a take is in, and check `takes/raw/` before believing it. Don't record or
+drive their screen unless they ask you to.
+
+### When the user asks Claude to drive the take
+
+Possible when the IDE has an MCP server (JetBrains: open files, apply patches, run configurations):
+1. Back up every file you will touch. Dry-run the final code off camera first (it compiles, the run
+   works), then restore the starting state. Hide panels that would spoil the result.
+2. Record only the IDE window, not an ultra-wide desktop: read its rectangle (Win32 `GetWindowRect`,
+   DPI-aware) and use `ffmpeg -f gdigrab -offset_x X -offset_y Y -video_size WxH -draw_mouse 0`,
+   as a background task, `-t` as a safety cap. Stop it by stopping that task, never by killing every
+   ffmpeg process.
+3. Act in script order: open the file, add code a few lines per patch, run. Never show secrets: a run
+   configuration's environment can hold an API key; use the configuration, never print its env.
+4. Restore the user's files from the backup and check they are identical.
 
 ## 2. Ingest
 
@@ -27,7 +41,18 @@ Wait for the user to say a take is in. Never record or drive their screen yourse
 It writes `takes/<scene>.mp4`, fitted exactly to the scene's slot, and `takes/<scene>.json` with the
 `speed` used. If ingest refuses (more than 8× needed), trim with `--from/--to` or ask for a shorter take.
 `--keep-static` keeps frozen stretches (for a scene that is mostly reading still code).
+`--pad #10131a` (or `padColor` in `.tutorial-video.json`) colours the bars around a take that isn't 16:9.
+
+**Per-action sync** (`--marks takes/<scene>.marks.json`): the plain fit speeds the whole take up evenly,
+so the middle drifts. Marks pin each action to the word that names it: `[{"src": 6.733, "at": 14.7}, ...]`,
+`src` seconds into the raw take, `at` seconds into the scene, the first at `0`. Stretches between marks
+are sped up to fit (a fast-forward badge goes over any ≥ 1.5×) or hold their last frame; the tail plays
+at 1×. Find `src` with scene detection (`ffmpeg -i raw.mkv -vf "select='gt(scene,0.002)',showinfo"
+-f null -` plus a contact sheet of frames to name each change) and `at` from word times
+(`npx hyperframes transcribe audio/<scene>.wav --model small.en`).
+
 Look at a few frames before going on: `ffmpeg -ss <t> -i takes/<scene>.mp4 -frames:v 1 frame.png`.
+With marks, check a frame just before and just after each `at`.
 
 ## 3. Build the HyperFrames project
 
