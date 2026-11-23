@@ -10,6 +10,7 @@ Marketplace for Claude plugins created or imported by [zakariahere](https://gith
 |--------|---------|----------|-------------|
 | [mcpascli](#mcpascli) | 1.0.0 | mcp | Turn any MCP server into a Claude skill — run all server tools via mcp2cli from natural language |
 | [pactjunitplugin](#pactjunitplugin) | 1.0.0 | development | Pact JUnit contract test generator for Java |
+| [tutorial-video](#tutorial-video) | 0.1.0 | media | Narrated tutorial videos and YouTube playlists with a cloned voice, screen takes and HyperFrames |
 
 ---
 
@@ -88,3 +89,37 @@ The skill ships with a full command reference for the Grafana MCP server, coveri
 - You need to generate Pact consumer or provider contract tests in Java (JUnit 5)
 - You want to scaffold `PactDslJsonBody` interactions, matchers, or provider states
 - You have an OpenAPI spec and want to convert it to Pact tests
+
+---
+
+### tutorial-video
+
+> Make narrated tutorial videos and whole YouTube playlists from docs or code. The voice comes first (a local cloned voice through Kyutai pocket-tts), real screen recordings are trimmed and fitted under the narration, and the explanations are HyperFrames motion graphics.
+
+- **Author:** zakariahere
+- **License:** Apache-2.0
+- **Repository:** https://github.com/zakariahere/claude-plugins
+- **Tags:** `video` · `tutorial` · `youtube` · `tts` · `screen-recording` · `hyperframes`
+
+#### Requirements
+
+- Node 18+, `ffmpeg` + `ffprobe`, and [`pocket-tts`](https://github.com/kyutai-labs/pocket-tts) (`uv tool install pocket-tts`) on PATH
+- The HyperFrames plugin: `/plugin marketplace add heygen-com/hyperframes`, then `/plugin install hyperframes@hyperframes`
+- A voice: `pocket-tts export-voice sample.wav myvoice.safetensors`, then point the plugin at it with
+  `$env:TUTORIAL_VOICE` or `{"voice": "..."}` in a `.tutorial-video.json`. The voice file never goes in Git.
+
+#### Skills
+
+| Skill | Description |
+|-------|-------------|
+| `/tutorial-video` | The pipeline and episode folder layout; start here |
+| `/script-episode` | Playlist plan and `script.md`: title / motion / screen scenes, written for the ear, with shot lists |
+| `/narrate` | Voice each scene, then lay out the timeline, `.srt` captions and YouTube chapters |
+| `/assemble` | Ingest screen takes, build the HyperFrames project, preview and render |
+| `/publish-prep` | YouTube title, description, chapters, thumbnail and upload checklist |
+
+#### The CLI
+
+`plugins/tutorial-video/scripts/tv.mjs` does the deterministic parts (no npm dependencies):
+`status`, `narrate`, `timeline`, `record` (prints the shot list and an ffmpeg screen recorder),
+`ingest` (trim, drop frozen waits, 1080p, fit the take to its narration). Tests: `node --test plugins/tutorial-video/test/*.test.mjs`.
