@@ -2,10 +2,11 @@
 // tutorial-video CLI. Node 18+, plus ffmpeg/ffprobe and pocket-tts on PATH. No npm dependencies.
 //
 //   node tv.mjs status   <episode>
-//   node tv.mjs narrate  <episode> [--scene id[,id]] [--voice path] [--temperature 0.8] [--language english]
+//   node tv.mjs narrate  <episode> [--scene id[,id]] [--voice path|name] [--temperature 0.8] [--language english] [--pace 0.93] [--sentence-pause 0.45]
 //   node tv.mjs timeline <episode> [--gap 0.5]
 //   node tv.mjs record   <episode> <scene>
-//   node tv.mjs ingest   <episode> <scene> [--from s] [--to s] [--keep-static] [--max-speed 8]
+//   node tv.mjs ingest   <episode> <scene> [--from s] [--to s] [--keep-static] [--max-speed 8] [--pad #rrggbb]
+//   node tv.mjs ingest   <episode> <scene> --marks marks.json   (pin each action: [{"src": s, "at": s}])
 //
 // <episode> is a folder holding script.md. See ../skills/tutorial-video/SKILL.md for the layout.
 
@@ -13,7 +14,7 @@ import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { buildSrt, chapters, fitSpeed, layout, parseScript } from "./lib.mjs";
+import { buildSrt, chapters, fitSpeed, joinFilter, layout, parseScript, planSegments, segmentsFilter, sentences } from "./lib.mjs";
 
 const TAKE_EXTS = [".mkv", ".mp4", ".mov", ".webm"];
 
@@ -79,7 +80,17 @@ function settings(root, flags) {
     language: flags.language ?? config.language,
     gap: Number(flags.gap ?? config.gap ?? 0.5),
     maxChars: Number(config.captionChars ?? 84),
+    padColor: config.padColor,
+    pace: Number(flags.pace ?? config.pace ?? 1),
+    sentencePause: Number(flags["sentence-pause"] ?? config.sentencePause ?? 0),
   };
+}
+
+/** Colour of the bars around a take that is not 16:9: --pad, else "padColor" in .tutorial-video.json, else black. */
+function padColor(root, flags) {
+  const c = String(flags.pad ?? settings(root, {}).padColor ?? "black");
+  if (!/^(#[0-9a-fA-F]{6}|[a-z]+)$/.test(c)) die(`bad pad colour "${c}": use #rrggbb or a name`);
+  return c.replace("#", "0x");
 }
 
 function findTake(root, id) {
@@ -124,7 +135,9 @@ function narrate(dir, flags) {
   const ep = loadEpisode(dir);
   const cfg = settings(ep.root, flags);
   if (!cfg.voice) die("no voice: pass --voice, set $env:TUTORIAL_VOICE, or add {\"voice\": \"...\"} to .tutorial-video.json");
-  if (!existsSync(cfg.voice)) die(`voice file not found: ${cfg.voice}`);
+  // A bare name ("george") is one of pocket-tts's built-in voices; anything else is a file to clone.
+  const builtIn = /^[a-z_]+$/.test(cfg.voice);
+  if (!builtIn && !existsSync(cfg.voice)) die(`voice file not found: ${cfg.voice}`);
 
   const only = typeof flags.scene === "string" ? flags.scene.split(",") : null;
   for (const id of only ?? []) if (!ep.scenes.some((s) => s.id === id)) die(`no scene "${id}" in script.md`);
@@ -145,9 +158,26 @@ function narrate(dir, flags) {
     } else if (only && !only.includes(s.id)) continue;
 
     console.log(`▶ ${s.id}: ${s.text.length} chars`);
-    const args = ["generate", "--voice", cfg.voice, "--temperature", cfg.temperature, "--text", s.text, "--output-path", out, "-q"];
-    if (cfg.language) args.push("--language", cfg.language);
-    run("pocket-tts", args);
+    const say = (text, path) => {
+      const args = ["generate", "--voice", cfg.voice, "--temperature", cfg.temperature, "--text", text, "--output-path", path, "-q"];
+      if (cfg.language) args.push("--language", cfg.language);
+      run("pocket-tts", args);
+    };
+    if (cfg.pace === 1 && cfg.sentencePause === 0) say(s.text, out);
+    else {
+      // Voice each sentence alone, then join them with a pause and apply the pace: TTS models rush
+      // sentence boundaries, and pauses fix most of that before any slow-down is needed.
+      const parts = sentences(s.text);
+      const tmp = join(audioDir, `.${s.id}.parts`);
+      mkdirSync(tmp, { recursive: true });
+      const files = parts.map((text, i) => {
+        const f = join(tmp, `${i}.wav`);
+        say(text, f);
+        return f;
+      });
+      run("ffmpeg", ["-v", "error", "-y", ...files.flatMap((f) => ["-i", f]), "-filter_complex", joinFilter(files.length, cfg.sentencePause, cfg.pace), "-map", "[a]", out]);
+      rmSync(tmp, { recursive: true, force: true });
+    }
     console.log(`✓ ${s.id}: ${probeDuration(out).toFixed(2)} s`);
   }
   console.log("next: `timeline` to lay the scenes out");
@@ -252,6 +282,7 @@ function ingest(dir, id, flags) {
 
   const tmp = join(ep.root, "takes", `${id}.pass1.mp4`);
   const out = join(ep.root, "takes", `${id}.mp4`);
+  if (flags.marks) return ingestMarks(ep, id, src, slot, out, flags);
   const trim = [];
   if (flags.from) trim.push("-ss", String(flags.from));
   if (flags.to) trim.push("-to", String(flags.to));
@@ -260,7 +291,7 @@ function ingest(dir, id, flags) {
   const vf1 = [
     flags["keep-static"] ? null : "mpdecimate=hi=64*12:lo=64*5:frac=0.33,setpts=N/FRAME_RATE/TB",
     "scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos",
-    "pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=black",
+    `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=${padColor(ep.root, flags)}`,
     "fps=30",
   ].filter(Boolean).join(",");
   run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", ...trim, "-i", src, "-an", "-vf", vf1, "-c:v", "libx264", "-preset", "veryfast", "-crf", "16", "-pix_fmt", "yuv420p", tmp]);
@@ -278,13 +309,40 @@ function ingest(dir, id, flags) {
   const visual = slot.visual ?? slot.duration;
   const hold = Math.max(0, visual - kept / speed);
   const vf2 = [`setpts=PTS/${speed}`, hold > 0 ? `tpad=stop_mode=clone:stop_duration=${hold.toFixed(3)}` : null, "fps=30"].filter(Boolean).join(",");
-  run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", tmp, "-vf", vf2, "-t", String(visual), "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]);
+  run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", tmp, "-vf", vf2, "-t", String(visual), "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-g", "30", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]);
   rmSync(tmp, { force: true });
 
   const meta = { source: src, keptSeconds: Number(kept.toFixed(3)), speed, holdSeconds: Number(hold.toFixed(3)), narration: slot.duration, visual };
   writeFileSync(join(ep.root, "takes", `${id}.json`), JSON.stringify(meta, null, 2) + "\n");
   console.log(`✓ takes/${id}.mp4: ${kept.toFixed(1)} s of action at ${speed}x${hold > 0 ? `, last frame held ${hold.toFixed(1)} s` : ""}`);
   if (speed >= 1.5) console.log(`  speed ${speed}x: show a fast-forward badge in compositions/${id}.html`);
+}
+
+/** --marks <file.json>: [{src, at}] pins each action in the raw take to its moment in the narration. */
+function ingestMarks(ep, id, src, slot, out, flags) {
+  if (flags.from || flags.to) die("--marks already says where the take starts; drop --from/--to");
+  const marksFile = resolve(ep.root, String(flags.marks));
+  if (!existsSync(marksFile)) die(`marks file not found: ${marksFile}`);
+  const raw = JSON.parse(readFileSync(marksFile, "utf8"));
+  const marks = Array.isArray(raw) ? raw : raw.marks;
+  const visual = slot.visual ?? slot.duration;
+  let segs;
+  try {
+    segs = planSegments(marks, probeDuration(src), visual);
+  } catch (e) {
+    die(e.message);
+  }
+  const normalise = ["scale=1920:1080:force_original_aspect_ratio=decrease:flags=lanczos", `pad=1920:1080:(ow-iw)/2:(oh-ih)/2:color=${padColor(ep.root, flags)}`, "fps=30"].join(",");
+  run("ffmpeg", ["-hide_banner", "-loglevel", "error", "-y", "-i", src, "-an", "-filter_complex", segmentsFilter(segs, normalise), "-map", "[v]", "-t", String(visual), "-c:v", "libx264", "-preset", "slow", "-crf", "18", "-g", "30", "-pix_fmt", "yuv420p", "-movflags", "+faststart", out]);
+
+  const meta = { source: src, marks: marksFile, narration: slot.duration, visual, segments: segs };
+  writeFileSync(join(ep.root, "takes", `${id}.json`), JSON.stringify(meta, null, 2) + "\n");
+  console.log(`✓ takes/${id}.mp4: ${segs.length} segments pinned to the narration`);
+  for (const s of segs) {
+    const note = s.speed > 1 ? `${s.speed}x` : s.hold > 0 ? `1x, holds ${s.hold}s` : "1x";
+    console.log(`  at ${String(s.at).padStart(6)}s  src ${s.src0}–${s.src1}  ${note}`);
+  }
+  if (segs.some((s) => s.speed >= 1.5)) console.log(`  fast segments: show a fast-forward badge over them in compositions/${id}.html`);
 }
 
 // ---------------------------------------------------------------- main

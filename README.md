@@ -10,7 +10,7 @@ Marketplace for Claude plugins created or imported by [zakariahere](https://gith
 |--------|---------|----------|-------------|
 | [mcpascli](#mcpascli) | 1.0.0 | mcp | Turn any MCP server into a Claude skill — run all server tools via mcp2cli from natural language |
 | [pactjunitplugin](#pactjunitplugin) | 1.0.0 | development | Pact JUnit contract test generator for Java |
-| [tutorial-video](#tutorial-video) | 0.1.0 | media | Narrated tutorial videos and YouTube playlists with a cloned voice, screen takes and HyperFrames |
+| [tutorial-video](#tutorial-video) | 0.2.0 | media | Narrated tutorial videos and YouTube playlists with a cloned voice, screen takes and HyperFrames |
 
 ---
 
@@ -122,4 +122,4 @@ The skill ships with a full command reference for the Grafana MCP server, coveri
 
 `plugins/tutorial-video/scripts/tv.mjs` does the deterministic parts (no npm dependencies):
 `status`, `narrate`, `timeline`, `record` (prints the shot list and an ffmpeg screen recorder),
-`ingest` (trim, drop frozen waits, 1080p, fit the take to its narration). Tests: `node --test plugins/tutorial-video/test/*.test.mjs`.
+`ingest` (trim, drop frozen waits, 1080p, fit the take to its narration, or `--marks` to pin each action to the word that names it). Tests: `node --test plugins/tutorial-video/test/*.test.mjs`.

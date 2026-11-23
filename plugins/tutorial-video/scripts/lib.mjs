@@ -150,6 +150,82 @@ export function fitSpeed(takeSeconds, slotSeconds, maxSpeed = 8) {
   return round(speed, 3);
 }
 
+/**
+ * Piecewise retiming for a take with known action moments.
+ * `marks`: [{src, at}] — `src` seconds into the raw take, `at` seconds into the scene where that moment must land.
+ * The first mark is where the scene starts (`at` 0). Each stretch between marks is sped up to fit its target
+ * (never slowed down); a stretch shorter than its target holds its last frame. After the last mark the take plays
+ * at real time until `visual`, holding its last frame if it runs out.
+ */
+export function planSegments(marks, takeSeconds, visual) {
+  if (!Array.isArray(marks) || marks.length === 0) throw new Error("marks: need at least one {src, at}");
+  if (marks[0].at !== 0) throw new Error("marks: the first mark must have at: 0 (where the scene starts)");
+  marks.forEach((m, i) => {
+    if (!(typeof m.src === "number" && typeof m.at === "number")) throw new Error(`marks[${i}]: src and at must be numbers`);
+    if (m.src < 0 || m.src > takeSeconds) throw new Error(`marks[${i}]: src ${m.src} is outside the take (0..${takeSeconds.toFixed(2)})`);
+    if (i > 0 && !(m.src > marks[i - 1].src)) throw new Error(`marks[${i}]: src must increase`);
+    if (i > 0 && !(m.at > marks[i - 1].at)) throw new Error(`marks[${i}]: at must increase`);
+  });
+  if (marks.at(-1).at >= visual) throw new Error(`marks: the last at (${marks.at(-1).at}) must be before the scene ends (${visual})`);
+
+  const segs = [];
+  for (let i = 0; i < marks.length; i++) {
+    const a = marks[i];
+    const b = marks[i + 1];
+    const src0 = a.src;
+    const target = (b ? b.at : visual) - a.at;
+    const src1 = b ? b.src : Math.min(takeSeconds, a.src + target);
+    const len = src1 - src0;
+    const speed = b && len > target ? len / target : 1;
+    const hold = Math.max(0, target - len / speed);
+    segs.push({ src0: round(src0), src1: round(src1), at: round(a.at), target: round(target), speed: round(speed, 3), hold: round(hold) });
+  }
+  return segs;
+}
+
+/** Narration split into sentences, so each can be voiced alone and joined with a pause between them. */
+export function sentences(text) {
+  return text
+    .split(/(?<=[.!?])\s+(?=\S)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/**
+ * ffmpeg -filter_complex joining n sentence clips (inputs 0..n-1) with `pause` seconds of silence between them,
+ * then slowed (or sped up) by `pace` without changing pitch. Output label [a].
+ */
+export function joinFilter(n, pause, pace) {
+  if (!(pace >= 0.5 && pace <= 2)) throw new Error(`pace ${pace} must be between 0.5 and 2`);
+  if (!(pause >= 0)) throw new Error(`sentencePause ${pause} must be 0 or more`);
+  const parts = [];
+  const ins = [];
+  for (let i = 0; i < n; i++) {
+    if (i < n - 1 && pause > 0) {
+      parts.push(`[${i}:a]apad=pad_dur=${pause}[p${i}]`);
+      ins.push(`[p${i}]`);
+    } else ins.push(`[${i}:a]`);
+  }
+  const tempo = pace === 1 ? "anull" : `atempo=${pace}`;
+  parts.push(`${ins.join("")}concat=n=${n}:v=0:a=1,${tempo}[a]`);
+  return parts.join(";");
+}
+
+/** ffmpeg -filter_complex for planSegments: normalise, split, retime each stretch, concat. Output label [v]. */
+export function segmentsFilter(segs, normalise) {
+  const n = segs.length;
+  const labels = segs.map((_, i) => `s${i}`);
+  const parts = [`[0:v]${normalise},split=${n}${labels.map((l) => `[${l}in]`).join("")}`];
+  segs.forEach((s, i) => {
+    const f = [`trim=start=${s.src0}:end=${s.src1}`, `setpts=(PTS-STARTPTS)/${s.speed}`];
+    if (s.hold > 0) f.push(`tpad=stop_mode=clone:stop_duration=${s.hold}`);
+    f.push("fps=30", `trim=duration=${s.target}`, "setpts=PTS-STARTPTS");
+    parts.push(`[${labels[i]}in]${f.join(",")}[${labels[i]}]`);
+  });
+  parts.push(`${labels.map((l) => `[${l}]`).join("")}concat=n=${n}:v=1:a=0[v]`);
+  return parts.join(";");
+}
+
 export function humanize(id) {
   const s = id.replace(/^\d+-/, "").replace(/-/g, " ");
   return s.charAt(0).toUpperCase() + s.slice(1);

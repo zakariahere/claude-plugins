@@ -15,7 +15,7 @@ screen takes and animations are fitted to it, never the other way round.
     script.md                 scenes + narration + shot lists         ← script-episode
     audio/<scene>.wav         one clip per scene                      ← narrate
     timeline.json             start/duration per scene                ← narrate (tv.mjs timeline)
-    takes/raw/<scene>.mkv     the user's screen recordings            ← record (the user)
+    takes/raw/<scene>.mkv     screen recordings (the user, or Claude if asked) ← record
     takes/<scene>.mp4 (.json) trimmed, 1080p, fitted to the slot      ← assemble (tv.mjs ingest)
     video/                    HyperFrames project                     ← assemble
     build/hosts.html          generated scene hosts + voice tracks
@@ -32,17 +32,18 @@ it says which scenes have voice, takes and ingested takes.
 | Command | Does |
 |---|---|
 | `status <ep>` | Table of scenes: type, voice ✓, slot length, take ✓, ingested ✓ |
-| `narrate <ep> [--scene a,b]` | pocket-tts per scene → `audio/`. Keeps existing clips; `--scene` redoes one and keeps the old as `.prev-N.wav` |
+| `narrate <ep> [--scene a,b]` | pocket-tts per scene → `audio/` (a cloned voice file or a built-in name; `sentencePause`/`pace` for tempo). Keeps existing clips; `--scene` redoes one and keeps the old as `.prev-N.wav` |
 | `timeline <ep>` | ffprobe the clips → `timeline.json`, `out/episode.srt`, `out/chapters.txt`, `build/hosts.html`; copies assets into `video/assets/` once `video/index.html` exists |
 | `record <ep> <scene>` | Prints the shot list, the narration to match and a PowerShell ffmpeg recorder one-liner |
 | `ingest <ep> <scene> [--from s --to s] [--keep-static]` | Trims, drops frozen stretches, 1920×1080@30, speeds up to fit the slot (max 8×, never slower; holds the last frame if short) |
+| `ingest <ep> <scene> --marks m.json` | Pins each action in the take to its moment in the narration (per-stretch speed-up or hold) |
 
 ## Order of work
 
 1. **script-episode**: write `script.md` from the sources. Get the user's OK on the script before voicing.
 2. **narrate**: voice every scene, listen to one clip with the user, run `timeline`.
 3. **Screen takes**: for each `[screen]` scene, run `record` and give the user its output. The user
-   records; you never drive their IDE or terminal for a take. Wait until they say the takes are in.
+   records, or asks you to drive the IDE and record it (assemble covers how). Wait until the takes are in.
 4. **assemble**: ingest the takes, build the HyperFrames project, preview, render.
 5. **publish-prep**: YouTube title, description, chapters, thumbnail, playlist.
 

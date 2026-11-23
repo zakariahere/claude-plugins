@@ -39,7 +39,7 @@
        "name": "tutorial-video",
        "source": "./plugins/tutorial-video",
        "description": "Narrated tutorial videos and YouTube playlists: script from docs, local cloned voice (pocket-tts), real screen recordings fitted to the narration, HyperFrames motion graphics, captions and chapters.",
-       "version": "0.1.0",
+       "version": "0.2.0",
        "author": {
          "name": "zakariahere"
        },

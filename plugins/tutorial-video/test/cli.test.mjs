@@ -99,3 +99,33 @@ test("a frozen stretch (waiting on sbt) is cut before fitting", { skip: !hasFfmp
     rmSync(ep, { recursive: true, force: true });
   }
 });
+
+test("--marks lands each action on its narration moment", { skip: !hasFfmpeg && "ffmpeg not on PATH" }, () => {
+  const ep = mkdtempSync(join(tmpdir(), "tv-episode-"));
+  try {
+    writeFileSync(join(ep, "script.md"), "## demo [screen]\nFirst this, then that.\n");
+    mkdirSync(join(ep, "audio"));
+    ff("-f", "lavfi", "-i", "sine=f=440:d=4", join(ep, "audio", "demo.wav"));
+    assert.equal(tv("timeline", ep).status, 0); // visual = 4 + 1 s tail = 5
+    mkdirSync(join(ep, "takes", "raw"), { recursive: true });
+    // 2 s red, 8 s green, 3 s blue: the cut to green (src 2) must land at 1 s, to blue (src 10) at 3 s.
+    ff("-f", "lavfi", "-i", "color=red:size=320x180:rate=30:d=2", "-f", "lavfi", "-i", "color=green:size=320x180:rate=30:d=8",
+       "-f", "lavfi", "-i", "color=blue:size=320x180:rate=30:d=3", "-filter_complex", "[0][1][2]concat=n=3:v=1",
+       "-pix_fmt", "yuv420p", join(ep, "takes", "raw", "demo.mp4"));
+    writeFileSync(join(ep, "marks.json"), JSON.stringify([{ src: 1, at: 0 }, { src: 2, at: 1 }, { src: 10, at: 3 }]));
+    const i = tv("ingest", ep, "demo", "--marks", "marks.json");
+    assert.equal(i.status, 0, i.stderr);
+    const out = join(ep, "takes", "demo.mp4");
+    assert.ok(Math.abs(dur(out) - 5) < 0.15, `duration ${dur(out)}`);
+    const colorAt = (t) => {
+      const r = spawnSync("ffmpeg", ["-v", "error", "-ss", String(t), "-i", out, "-frames:v", "1", "-vf", "crop=8:8:956:536,scale=1:1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"]);
+      const [R, G, B] = r.stdout;
+      return R > 150 ? "red" : G > 100 ? "green" : B > 150 ? "blue" : `?${R},${G},${B}`;
+    };
+    assert.deepEqual([0.5, 1.5, 2.8, 3.3, 4.8].map(colorAt), ["red", "green", "green", "blue", "blue"]);
+    const meta = JSON.parse(readFileSync(join(ep, "takes", "demo.json"), "utf8"));
+    assert.equal(meta.segments[1].speed, 4); // 8 s of green into 2 s
+  } finally {
+    rmSync(ep, { recursive: true, force: true });
+  }
+});
