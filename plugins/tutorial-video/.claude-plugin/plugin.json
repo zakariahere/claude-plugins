@@ -1,0 +1,11 @@
+{
+  "name": "tutorial-video",
+  "description": "Make narrated tutorial videos and YouTube playlists: script from docs, voice with a local cloned voice (pocket-tts), real screen recordings fitted to the narration, HyperFrames motion graphics, captions and YouTube chapters.",
+  "version": "0.1.0",
+  "author": {
+    "name": "zakariahere"
+  },
+  "repository": "https://github.com/zakariahere/claude-plugins",
+  "license": "Apache-2.0",
+  "keywords": ["video", "tutorial", "youtube", "tts", "screen-recording", "hyperframes"]
+}

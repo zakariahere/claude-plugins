@@ -34,6 +34,19 @@
        "license": "Apache-2.0",
        "category": "observability",
        "tags": ["grafana", "prometheus", "loki", "tempo", "mcp", "observability"]
+     },
+     {
+       "name": "tutorial-video",
+       "source": "./plugins/tutorial-video",
+       "description": "Narrated tutorial videos and YouTube playlists: script from docs, local cloned voice (pocket-tts), real screen recordings fitted to the narration, HyperFrames motion graphics, captions and chapters.",
+       "version": "0.1.0",
+       "author": {
+         "name": "zakariahere"
+       },
+       "repository": "https://github.com/zakariahere/claude-plugins",
+       "license": "Apache-2.0",
+       "category": "media",
+       "tags": ["video", "tutorial", "youtube", "tts", "screen-recording", "hyperframes"]
      }
    ]
  }
